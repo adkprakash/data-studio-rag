@@ -60,7 +60,7 @@ def build_block_tree(html_content, max_words=50):
     return str(soup)
 
 
-sample_html_path = "./data/tables_1742275574.html"
+sample_html_path = "./data/tables_1742273897.html"
 
 
 def call_build_block():
@@ -69,6 +69,8 @@ def call_build_block():
     
     
     block_tree_html = build_block_tree(sample_html)
+
+    print(block_tree_html[:2000])
     
     return block_tree_html
 
