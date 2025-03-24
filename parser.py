@@ -5,35 +5,33 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain_ollama import OllamaLLM
-from pydentic_classes import TableParser
+from pydentic_classes import GenericPartsData
 from clean_html import call_build_block
-import time
 
 class TableDataParser:
     def __init__(self):
         self.llm = OllamaLLM(
             model="llama3",
-            # base_url="http://192.168.20.106:11434",
+            base_url="http://192.168.20.194:11434",
             temperature=0.1
         )
-        self.output_parser = PydanticOutputParser(pydantic_object=TableParser)
-        self.format_instructions = self.output_parser.get_format_instructions()
+        self.output_parser = PydanticOutputParser(pydantic_object=GenericPartsData)
         
         self.prompt = PromptTemplate(
-            template=(
-                "SYSTEM: You are a structured data extraction tool. "
-                "Follow these rules strictly:\n"
-                "1. Extract ONLY the specified fields in the schema. Here is the schema:\n"
-                "{format_instructions}\n"
-                "2. NEVER add comments, explanations, or markdown.\n"
-                "3. Use EXACTLY the structure defined in the schema.\n"
-                "4. If information is missing, use null.\n"
-                "5. Maintain strict key names as shown in the schema.\n\n"
-                "USER INPUT: {raw_data}\n\n"
-                "ASSISTANT RESPONSE (ONLY VALID JSON):"
-            ),
+            template="""SYSTEM: Extract ONLY these fields as raw JSON:
+            1. thread_size: Extract the actual thread size/type from the headers (e.g., "2-56", "M6-0.5", "1/4-20 UNC").
+            2. material_surface: Extract material surface treatments (ALWAYS list all available).
+
+            STRICT RULES:
+            - If no thread size is found, return "unknown".
+            - Do NOT return example values; extract directly from the headers.
+            - Output ONLY the JSON object. Do not add any other text or explanations.
+
+            Table Headers:
+            {raw_data}
+
+            JSON Output:""",
             input_variables=["raw_data"],
-            partial_variables={"format_instructions": self.format_instructions},
         )
         
         self.chain = (
@@ -43,30 +41,63 @@ class TableDataParser:
             | self.output_parser
         )
 
-    def parse_company_data(self, raw_data: str) -> TableParser:
-        """Send extracted table HTML content to LLM for parsing."""
+    def parse_company_data(self, raw_data: str) -> GenericPartsData:
         try:
-            return self.chain.invoke({"raw_data": raw_data})
+            print("Sending to LLM:", raw_data)  # Debugging log
+            raw_response = self.llm.invoke(self.prompt.format(raw_data=raw_data))
+            print("Raw LLM Output:", raw_response)  # Debugging log
+            return self.output_parser.parse(raw_response)
         except Exception as e:
             print(f"Error parsing data: {e}")
             return None
 
-    def extract_tables_from_html(self, html_content: str):
-        """Extracts tables from HTML and returns them as a list of strings."""
+    def extract_table_headers_from_html(self, html_content: str):
         soup = BeautifulSoup(html_content, "html.parser")
         tables = soup.find_all("table")
-        return [str(table) for table in tables]  # Convert each table to a string
+        
+        headers_list = []
+        for table in tables:
+            headers = [th.get_text(strip=True) for th in table.find_all("th") if th.get_text(strip=True)]  # Extract only text
+            headers_text = ", ".join(headers) if headers else "unknown"  # Fallback if no headers
+            headers_list.append(headers_text)
 
-# Instantiate the parser
+        return headers_list
+
+
+# Initialize parser
 table_parser = TableDataParser()
 
-# Get HTML content from the `build_block_tree` function
+# Retrieve HTML content
 html_content = call_build_block()
+if not html_content:
+    print("Error: No HTML content retrieved!")
+    exit()
 
-try:
-    # Extract tables from HTML
-    html_tables = table_parser.extract_tables_from_html(html_content)
-    
+# Extract table headers
+html_tables_heads = table_parser.extract_table_headers_from_html(html_content)
+
+if not html_tables_heads:
+    print("Error: No tables found in HTML!")
+    exit()
+
+# Debug: Print extracted headers before sending to LLM
+print("Extracted Headers:", html_tables_heads)
+
+# Parse the first table's headers
+parsed_data = table_parser.parse_company_data(html_tables_heads[4])
+
+# Print final parsed data
+if parsed_data:
+    print(parsed_data.model_dump_json(indent=2))
+else:
+    print("Failed to process Table")
+
+
+
+
+
+
+    """
     # Process each table individually
     for idx, table_html in enumerate(html_tables):
         print(f"\nProcessing Table {idx + 1}:\n")
@@ -82,7 +113,7 @@ except Exception as e:
     print(f"Failed to parse company data: {e}")
 
 
-    """ def save_to_excel(self, filename="./excel/output2.xlsx"):
+     def save_to_excel(self, filename="./excel/output2.xlsx"):
         
         os.makedirs(os.path.dirname(filename), exist_ok=True)
 
