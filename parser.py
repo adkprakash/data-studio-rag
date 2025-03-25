@@ -221,7 +221,7 @@ if not html_tables_heads:
 print("Extracted Headers:", html_tables_heads)
 
 
-parsed_data = table_parser.parse_company_data(html_tables_heads[3])
+parsed_data = table_parser.parse_company_data(html_tables_heads[0])
 
 
 if parsed_data:
