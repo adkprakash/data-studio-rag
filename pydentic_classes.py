@@ -26,8 +26,11 @@ class GenericPartsData(BaseModel):
         description="Material composition and surface treatments",
         examples=["Black-Oxide Alloy Steel", "Zinc-Plated Carbon Steel"],
         default_factory=list
+
+        ,examples=["0-80","1/4-20 UNC"]
+        ,examples=["Black-Oxide Alloy Steel", "Zinc-Plated Carbon Steel"]
     )
 """
 class GenericPartsData(BaseModel):
-    thread_size: Optional[str] = Field(None, description="measurement value",examples=["0-80","1/4-20 UNC"])
-    material_surface: Optional[List[str]] = Field(None, description="Material composition and surface treatments",examples=["Black-Oxide Alloy Steel", "Zinc-Plated Carbon Steel"])
+    thread_size: Optional[List[str]] = Field([], description="measurement value")
+    material_surface: Optional[List[str]] = Field([], description="Material composition and surface treatments")

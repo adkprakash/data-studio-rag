@@ -9,3 +9,4 @@ beautifulsoup4==4.13.3
 langchain_openai
 pymongo
 pandas
+xlsxwriter
