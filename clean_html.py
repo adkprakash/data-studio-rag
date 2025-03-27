@@ -60,7 +60,7 @@ def build_block_tree(html_content, max_words=50):
     return str(soup)
 
 
-sample_html_path = "./data/tables_1742273897.html"
+sample_html_path = "./mcmaster_html/tables_with_headers_1743063676.html"
 
 
 def call_build_block():
