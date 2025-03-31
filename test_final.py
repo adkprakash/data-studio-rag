@@ -37,14 +37,12 @@ class FinalDataframe:
 
             header_df = header_df.copy()
             current_cols = header_df.shape[1]
-            print(current_cols)
 
             for idx, key in enumerate(keys):
                 new_col_name = str(current_cols + idx + 1)
                 header_df[new_col_name] = np.nan
                 header_df[new_col_name] = header_df[new_col_name].astype('object')
                 header_df.iloc[-1, header_df.columns.get_loc(new_col_name)] = str(key)
-                print(header_df.head())
 
             combined = pd.concat([header_df.iloc[[-1]], body_df], ignore_index=True)
             combined.columns = combined.iloc[0]
@@ -99,67 +97,28 @@ class FinalDataframe:
     def merge_header(header_df, assign_material_surface_df):
         try:
             header_columns = header_df.columns.tolist()
-            print(header_columns)
             assign_columns = assign_material_surface_df.columns.tolist()
 
             column_mapping = {header_col: assign_col for header_col, assign_col in zip(header_columns, assign_columns)}
-            #print(column_mapping)
             header_df_renamed = header_df.rename(columns=column_mapping)
             
             merged_df = pd.concat([header_df_renamed, assign_material_surface_df], axis=0, ignore_index=True)
-
-            #print(merged_df.head())
             
             value = 0
             for header in merged_df.columns:
                 merged_df.rename(columns={header: value}, inplace=True)
                 value += 1
             
-            #print(merged_df.head())
+            print(merged_df.head())
             return merged_df
         except Exception as e:
             print(f"Error merging header: {e}")
             return None
 
-
-def save_dataframes_to_excel(dataframes, filename="./mcmaster_excel/test_time_1.xlsx"):
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    if not dataframes:
-        print("No data to save")
-        return
-
-    try:
-        
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            for idx, df in enumerate(dataframes, 1):
-                
-                if not df.empty:
-                    sheet_name = f"Table_{idx}"
-                    
-                    sheet_name = sheet_name[:31]
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
-                else:
-                    print(f"Skipping empty DataFrame at index {idx}")
-        print(f"Successfully saved to {filename}")
-    except Exception as e:
-        print(f"Save error: {e}")
-
-
 if __name__ == "__main__":
-   
-   
     start_time = time.time()
-
-    
     final_data = FinalDataframe()
     final_data.process_all_tables()
-    save_dataframes_to_excel(final_data.processed_dfs)
-
-    
     end_time = time.time()
-
-    
     processing_time = end_time - start_time
-
-    
     print(f"Processing time: {processing_time:.2f} seconds")
