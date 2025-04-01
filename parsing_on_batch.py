@@ -105,8 +105,7 @@ class TableDataParser:
         for table in tables:
             headers = [
                 th.get_text(strip=True)
-                .replace(u'\xa0', ' ')
-                .replace('"', '')  
+                .replace(u'\xa0', ' ') 
                 for th in table.find_all("th")
             ]
             extracted_headers.append(headers if headers else ["unknown"])
@@ -134,5 +133,10 @@ def process_html_and_extract_data():
     
     parsed_data = table_parser.process_tables_batch(html_tables_heads)
 
+    #print(len(parsed_data))
+
     
     return parsed_data
+
+
+#process_html_and_extract_data()

@@ -15,7 +15,7 @@ class FinalDataframe:
 
     def process_all_tables(self):
         for i in range(self.total_tables):
-            header_df = self.header_dfs[i]
+            header_df = self.header_dfs[i].copy()
             body_df = self.body_dfs[i]
             llm_output = self.llm_output_list[i]
 
@@ -35,21 +35,23 @@ class FinalDataframe:
             parsed_dict = json.loads(llm_output)
             keys = list(parsed_dict.keys())
 
-            header_df = header_df.copy()
-            current_cols = header_df.shape[1]
-            print(current_cols)
+            head_row_len = header_df.shape[0]
+            no_cols = header_df.shape[1]
 
-            for idx, key in enumerate(keys):
-                new_col_name = str(current_cols + idx + 1)
-                header_df[new_col_name] = np.nan
-                header_df[new_col_name] = header_df[new_col_name].astype('object')
-                header_df.iloc[-1, header_df.columns.get_loc(new_col_name)] = str(key)
-                print(header_df.head())
+            # Convert new columns to 'object' dtype before assignment
+            for i, key in enumerate(keys):
+                new_column_name = str(no_cols + 1)
+                header_df[new_column_name] = np.nan
+                header_df[new_column_name] = header_df[new_column_name].astype('object')
+                header_df.loc[head_row_len - 1, new_column_name] = key
+                no_cols += 1
 
+            # Merge header and body
             combined = pd.concat([header_df.iloc[[-1]], body_df], ignore_index=True)
-            combined.columns = combined.iloc[0]
-            combined = combined.drop(0).reset_index(drop=True)
-            combined.columns = combined.columns.str.strip()
+            combined.columns = combined.iloc[0]  # Set new column headers
+            combined = combined.drop(0).reset_index(drop=True)  # Drop the first row
+            combined.columns = combined.columns.str.strip()  # Clean column names
+
             return combined
         except Exception as e:
             print(f"Error adding header: {e}")
@@ -57,7 +59,7 @@ class FinalDataframe:
 
     @staticmethod
     def assign_thread_size(data_dict, dataframe):
-        thread_sizes = data_dict.get('thread_size', [])
+        thread_sizes = set(data_dict.get('thread_size', []))  # Convert list to set for fast lookup
         if not thread_sizes:
             return dataframe
 
@@ -77,7 +79,7 @@ class FinalDataframe:
 
     @staticmethod
     def assign_material_surface(data_dict, dataframe):
-        materials = data_dict.get('material_surface', [])
+        materials = set(data_dict.get('material_surface', []))  # Convert list to set
         if not materials:
             return dataframe
 
@@ -94,28 +96,25 @@ class FinalDataframe:
 
         df = df[~df[first_col].isin(materials)].reset_index(drop=True)
         return df
-    
+
     @staticmethod
-    def merge_header(header_df, assign_material_surface_df):
+    def merge_header(header_df, processed_df):
         try:
             header_columns = header_df.columns.tolist()
-            print(header_columns)
-            assign_columns = assign_material_surface_df.columns.tolist()
+            assign_columns = processed_df.columns.tolist()
 
+            # Create a mapping between the header and processed columns
             column_mapping = {header_col: assign_col for header_col, assign_col in zip(header_columns, assign_columns)}
-            #print(column_mapping)
-            header_df_renamed = header_df.rename(columns=column_mapping)
-            
-            merged_df = pd.concat([header_df_renamed, assign_material_surface_df], axis=0, ignore_index=True)
 
-            #print(merged_df.head())
-            
-            value = 0
-            for header in merged_df.columns:
-                merged_df.rename(columns={header: value}, inplace=True)
-                value += 1
-            
-            #print(merged_df.head())
+            # Rename header columns
+            header_df_renamed = header_df.rename(columns=column_mapping)
+
+            # Merge both DataFrames
+            merged_df = pd.concat([header_df_renamed, processed_df], axis=0, ignore_index=True)
+
+            # Rename columns numerically
+            merged_df.columns = range(len(merged_df.columns))
+
             return merged_df
         except Exception as e:
             print(f"Error merging header: {e}")
@@ -129,14 +128,10 @@ def save_dataframes_to_excel(dataframes, filename="./mcmaster_excel/test_time_1.
         return
 
     try:
-        
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
             for idx, df in enumerate(dataframes, 1):
-                
                 if not df.empty:
-                    sheet_name = f"Table_{idx}"
-                    
-                    sheet_name = sheet_name[:31]
+                    sheet_name = f"Table_{idx}"[:31]  # Ensure sheet name doesn't exceed Excel limit
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
                 else:
                     print(f"Skipping empty DataFrame at index {idx}")
@@ -146,20 +141,11 @@ def save_dataframes_to_excel(dataframes, filename="./mcmaster_excel/test_time_1.
 
 
 if __name__ == "__main__":
-   
-   
     start_time = time.time()
 
-    
     final_data = FinalDataframe()
     final_data.process_all_tables()
     save_dataframes_to_excel(final_data.processed_dfs)
 
-    
     end_time = time.time()
-
-    
-    processing_time = end_time - start_time
-
-    
-    print(f"Processing time: {processing_time:.2f} seconds")
+    print(f"Processing time: {end_time - start_time:.2f} seconds")

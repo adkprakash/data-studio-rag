@@ -70,6 +70,9 @@ def call_build_block():
     
     block_tree_html = build_block_tree(sample_html)
 
+    print(block_tree_html)
+
+
     
     return block_tree_html
 

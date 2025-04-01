@@ -30,7 +30,7 @@ class TableDataParser:
 
             Rules:
             1. Output **ONLY** valid JSON.
-            2. Ensure there are **NO** extra quotation marks around the values (e.g., not `""4-40""`, but `"4-40"`).
+            2. Ensure there are **NO** extra quotation marks around the values.
             3. Ensure that the values are directly enclosed in double quotes without any additional formatting.
             4. No explanations, comments, or formatting outside the JSON.
             5. If no material is found, use `"material_surface": ["unknown"]`.
@@ -115,7 +115,6 @@ class TableDataParser:
             headers = [
                 th.get_text(strip=True)
                 .replace(u'\xa0', ' ')
-                .replace('"', '')  
                 for th in table.find_all("th")
             ]
             extracted_headers.append(headers if headers else ["unknown"])
@@ -144,7 +143,7 @@ if not html_tables_heads:
 print("Extracted Headers:", html_tables_heads)
 
 
-parsed_data = table_parser.parse_company_data(html_tables_heads[0])
+parsed_data = table_parser.parse_company_data(html_tables_heads[54])
 
 
 if parsed_data:
