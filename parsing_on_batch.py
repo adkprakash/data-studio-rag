@@ -62,11 +62,14 @@ class TableDataParser:
         
         json_str = re.sub(
             r'"thread_size": \[(.*?)\]',
-            lambda m: '"thread_size": [' + ', '.join(['"' + s.strip().replace('"', '') + '"' for s in m.group(1).split(',') if s.strip()]) + ']',
+            lambda m: '"thread_size": [' + ', '.join(
+                ['"' + s.strip().replace('"', '').replace('\\', '') + '"'  # Remove unwanted backslashes
+                for s in m.group(1).split(',') if s.strip()]
+            ) + ']',
             json_str,
             flags=re.DOTALL
         )
-        
+
         json_str = json_str.replace(u'\xa0', ' ')
         
         return json_str
@@ -133,10 +136,8 @@ def process_html_and_extract_data():
     
     parsed_data = table_parser.process_tables_batch(html_tables_heads)
 
-    #print(len(parsed_data))
-
+    print(parsed_data[70])
     
     return parsed_data
 
-
-#process_html_and_extract_data()
+process_html_and_extract_data()

@@ -6,6 +6,7 @@ import numpy as np
 import os
 import time
 
+
 class FinalDataframe:
     def __init__(self):
         self.header_dfs, self.body_dfs = create_dataframes()
@@ -50,7 +51,7 @@ class FinalDataframe:
             combined = pd.concat([header_df.iloc[[-1]], body_df], ignore_index=True)
             combined.columns = combined.iloc[0]  # Set new column headers
             combined = combined.drop(0).reset_index(drop=True)  # Drop the first row
-            combined.columns = combined.columns.str.strip()  # Clean column names
+            combined.columns = combined.columns.str.strip()  
 
             return combined
         except Exception as e:
@@ -59,7 +60,7 @@ class FinalDataframe:
 
     @staticmethod
     def assign_thread_size(data_dict, dataframe):
-        thread_sizes = set(data_dict.get('thread_size', []))  # Convert list to set for fast lookup
+        thread_sizes = {size.replace('"', '').replace('\\', '') for size in data_dict.get('thread_size', [])}  
         if not thread_sizes:
             return dataframe
 
@@ -69,17 +70,20 @@ class FinalDataframe:
         current_size = None
 
         for idx, row in df.iterrows():
-            value = row[first_col]
+            value_before = row[first_col]
+            value = value_before.replace('"', '').replace('\\', '').replace("\xa0", " ") 
             if value in thread_sizes:
-                current_size = value
+                current_size = value_before
             df.at[idx, 'thread_size'] = current_size
 
-        df = df[~df[first_col].isin(thread_sizes)].reset_index(drop=True)
+        df = df[~df[first_col].apply(lambda x: x.replace('"', '').replace('\\', '').replace("\xa0", " ") in thread_sizes)].reset_index(drop=True)
+
         return df
+
 
     @staticmethod
     def assign_material_surface(data_dict, dataframe):
-        materials = set(data_dict.get('material_surface', []))  # Convert list to set
+        materials = set(data_dict.get('material_surface', []))  
         if not materials:
             return dataframe
 
@@ -103,16 +107,16 @@ class FinalDataframe:
             header_columns = header_df.columns.tolist()
             assign_columns = processed_df.columns.tolist()
 
-            # Create a mapping between the header and processed columns
+            
             column_mapping = {header_col: assign_col for header_col, assign_col in zip(header_columns, assign_columns)}
 
-            # Rename header columns
+            
             header_df_renamed = header_df.rename(columns=column_mapping)
 
-            # Merge both DataFrames
+            
             merged_df = pd.concat([header_df_renamed, processed_df], axis=0, ignore_index=True)
 
-            # Rename columns numerically
+            
             merged_df.columns = range(len(merged_df.columns))
 
             return merged_df
@@ -131,7 +135,7 @@ def save_dataframes_to_excel(dataframes, filename="./mcmaster_excel/test_time_1.
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
             for idx, df in enumerate(dataframes, 1):
                 if not df.empty:
-                    sheet_name = f"Table_{idx}"[:31]  # Ensure sheet name doesn't exceed Excel limit
+                    sheet_name = f"Table_{idx}"[:31]  
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
                 else:
                     print(f"Skipping empty DataFrame at index {idx}")
