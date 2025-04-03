@@ -136,8 +136,7 @@ def process_html_and_extract_data():
     
     parsed_data = table_parser.process_tables_batch(html_tables_heads)
 
-    print(parsed_data[70])
+
     
     return parsed_data
 
-process_html_and_extract_data()

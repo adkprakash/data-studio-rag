@@ -1,5 +1,7 @@
 from parsing_on_batch import process_html_and_extract_data
+from clean_html import call_build_block
 from extract_table import create_dataframes
+from bs4 import BeautifulSoup
 import json
 import pandas as pd
 import numpy as np
@@ -124,8 +126,29 @@ class FinalDataframe:
             print(f"Error merging header: {e}")
             return None
 
+def preprocess_for_excel_name():
+    html_elements = call_build_block()
+    soup = BeautifulSoup(html_elements, "html.parser")
+    h3_elements = soup.find_all("h3")
+    print(f"All the h3 elements: {h3_elements}")
+    
+    last_text = ""
+    if h3_elements:
+        last_h3 = h3_elements[-1]
+        text_parts = list(last_h3.stripped_strings)
+        if text_parts:
+            last_text = text_parts[-1]
+    
+    last_text = last_text.replace(" ", "_").replace(".", "")
+    return last_text
 
-def save_dataframes_to_excel(dataframes, filename="./mcmaster_excel/test_time_1.xlsx"):
+def save_dataframes_to_excel(dataframes, filename=None):
+    
+    if filename is None:
+        base_name = preprocess_for_excel_name()
+        dir_path = "./mcmaster_excel/"
+        filename = os.path.join(dir_path, f"{base_name}.xlsx")
+    
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     if not dataframes:
         print("No data to save")
