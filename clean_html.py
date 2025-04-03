@@ -52,7 +52,7 @@ def clean_html(html_content: str) -> str:
 
 
 
-def build_block_tree(html_content, max_words=50):
+def build_block_tree(html_content):
     cleaned_html = clean_html(html_content)
     soup = BeautifulSoup(cleaned_html, "html.parser")
  
@@ -60,7 +60,7 @@ def build_block_tree(html_content, max_words=50):
     return str(soup)
 
 
-sample_html_path = "./mcmaster_html/tables_with_headers_1743063071.html"
+sample_html_path = "./mcmaster_html/tables_with_headers_1743063676.html"
 
 
 def call_build_block():
@@ -70,8 +70,5 @@ def call_build_block():
     
     block_tree_html = build_block_tree(sample_html)
 
-
     
     return block_tree_html
-
-call_build_block()
