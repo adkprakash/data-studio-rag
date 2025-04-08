@@ -1,4 +1,4 @@
-from parsing_on_batch_openai import process_html_and_extract_data
+from parsing_on_batch import process_html_and_extract_data
 from clean_html import call_build_block
 from extract_table import create_dataframes
 from bs4 import BeautifulSoup
@@ -41,7 +41,7 @@ class FinalDataframe:
             head_row_len = header_df.shape[0]
             no_cols = header_df.shape[1]
 
-            
+            # Convert new columns to 'object' dtype before assignment
             for i, key in enumerate(keys):
                 new_column_name = str(no_cols + 1)
                 header_df[new_column_name] = np.nan
@@ -49,10 +49,10 @@ class FinalDataframe:
                 header_df.loc[head_row_len - 1, new_column_name] = key
                 no_cols += 1
 
-            
+            # Merge header and body
             combined = pd.concat([header_df.iloc[[-1]], body_df], ignore_index=True)
-            combined.columns = combined.iloc[0]  
-            combined = combined.drop(0).reset_index(drop=True)  
+            combined.columns = combined.iloc[0]  # Set new column headers
+            combined = combined.drop(0).reset_index(drop=True)  # Drop the first row
             combined.columns = combined.columns.str.strip()  
 
             return combined

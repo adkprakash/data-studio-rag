@@ -9,10 +9,13 @@ def clean_html(html_content: str) -> str:
     for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
         comment.extract()
 
-    void_elements = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-                     'link', 'meta', 'param', 'source', 'track', 'wbr'}
+    void_elements = {'area', 'base', 'col', 'embed', 'hr', 'img', 'input',
+                 'link', 'meta', 'param', 'source', 'track', 'wbr'}
     for tag in soup.find_all(void_elements):
         tag.decompose()
+
+    for br in soup.find_all("br"):
+        br.replace_with(" ")
 
     def preserve_text_before_removal(tag):
         if tag.name == "a":
@@ -51,10 +54,13 @@ def ensure_thead_between_table_and_tbody(html: str) -> str:
         tbody = table.find("tbody")
         thead = table.find("thead")
 
-        
         if tbody and not thead:
             new_thead = soup.new_tag("thead")
             tbody.insert_before(new_thead)
+            
+            for tr in table.find_all('tr', recursive=False):
+                tr.extract()
+                new_thead.append(tr)
 
     return str(soup)
 
@@ -91,19 +97,16 @@ def build_block_tree(html_content):
 
     return str(soup)
 
-sample_html_path = "./mcmaster_html/tables_with_headers_and_specific_div_1744085007.html"
+sample_html_path = "./mcmaster_html/tables_52696399f4cd63f31f4c617825b5feda.html"
 
 def call_build_block():
     with open(sample_html_path, "r", encoding="utf-8") as file:
         sample_html = file.read()
 
     block_tree_html = build_block_tree(sample_html)
+ 
 
-    print(block_tree_html)
     return block_tree_html
-
-call_build_block()
-
 
 
 

@@ -56,11 +56,10 @@ def create_dataframes():
         
         thead_dataframes.append(thead_df)
         tbody_dataframes.append(tbody_df)
-        print(tbody_dataframes)
+
 
         
 
     return thead_dataframes, tbody_dataframes
 
-create_dataframes()
 

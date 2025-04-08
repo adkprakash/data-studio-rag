@@ -26,28 +26,30 @@ class TableDataParser:
         self.output_parser = PydanticOutputParser(pydantic_object=GenericPartsData)
 
         self.prompt = PromptTemplate(
-            template="""Extract ONLY the following fields as raw JSON.
-            **DO NOT INCLUDE ANY TEXT BEFORE/AFTER THE JSON**.
+            template="""Extract the following fields as raw JSON. 
+            **DO NOT INCLUDE ANY TEXT BEFORE/AFTER THE JSON**. 
 
             Fields to extract:
             - thread_size: List of thread sizes (e.g., "2-56", "M6-0.5", "1/4-20 UNC")
-            - material_surface: List of materials (e.g., "Alloy Steel", "Black-Oxide Alloy Steel")
-
-            **ONLY output the raw JSON as specified below, and NOTHING ELSE.**
+            - material_surface: List of materials (e.g., "Alloy Steel", "Black-Oxide Alloy Steel","Double Nut")
 
             Rules:
-            1. Output **ONLY** valid JSON, no other explanation.
+            1. Output **ONLY** valid JSON.
             2. Ensure there are **NO** extra quotation marks around the values (e.g., not `""4-40""`, but `"4-40"`).
-            3. Values must be directly enclosed in double quotes with no additional formatting or text.
-            4. NO extra text, explanations, comments, or formatting outside the JSON output.
-            5. If no material is found, output `"material_surface": ["unknown"]`.
-            6. **Do NOT process or extract data from the examples in the prompt**.
+            3. Ensure that the values are directly enclosed in double quotes without any additional formatting.
+            4. No explanations, comments, or formatting outside the JSON.
+            5. If no material is found, use `"material_surface": ["unknown"]`.
+            6. Do not extract data from the examples given in the prompt.
+            7. Some of the materials surface are made up of more than one materials.
 
             Input Data:
             {raw_data}
 
             Output format (copy-paste this and fill in values):
-            {{"thread_size": [...], "material_surface": [...] }}
+            {{
+            "thread_size": [...],
+            "material_surface": [...]
+            }}
             """
             , input_variables=["raw_data"],
         )
@@ -88,56 +90,46 @@ class TableDataParser:
     def parse_company_data(self, raw_data: list) -> GenericPartsData:
         try:
             if isinstance(raw_data, list):
-                raw_data = "\n".join([str(item) for item in raw_data])
-                print(f"Converted raw_data (string format): {raw_data}")  
-
-            print(f"Data type of raw_data before invoking LLM: {type(raw_data)}")
-            print(f"Raw data content: {raw_data}")
-
-            raw_response = self.llm.invoke(self.prompt.format(raw_data=raw_data))
+                
+                raw_data = "\n".join(raw_data)
+                
             
-            cleaned_json = self.clean_json_output(raw_response.content)
-
-            return self.output_parser.parse(cleaned_json)
-        except json.JSONDecodeError as e:
-            print(f"JSON Decode Error: {str(e)}")
-            return None
+            formatted_data = "TABLE HEADERS:\n" + raw_data
+            
+            return self.chain.invoke({"raw_data": formatted_data})
         except Exception as e:
-            print(f"Error parsing data: {str(e)}")
-            return None
-
+            print(f"Parser error: {str(e)}")
+            return GenericPartsData(thread_size=[], material_surface=["unknown"])
     def process_tables_batch(self, tables: list) -> list:
+        
         results = []
-        if tables:  
-            table = tables[0]  
-            raw_data = "\n".join([str(item).strip() for item in table if item.strip()])
-            
-            print(f"Raw data for table header: {raw_data}")  
-            
-            
-            if raw_data:  
-                result = self.parse_company_data(raw_data)
-                if result:
-                    results.append(result.model_dump_json(indent=2))
-            else:
-                print("Error: Empty data for the table.")
+        for header_group in tables:
+            if header_group:  # Check if headers exist
+                raw_data = "\n".join(header_group)
+                try:
+                    result = self.parse_company_data(raw_data)
+                    if result:
+                        results.append(result.model_dump_json(indent=2))
+                except Exception as e:
+                    print(f"Skipping header group due to error: {str(e)}")
         return results
 
+    
     def extract_tables_and_headers(self, html_content: str):
         
         soup = BeautifulSoup(html_content, "html.parser")
         tables = soup.find_all("table")
         
         extracted_headers = []
-        if tables:
-            first_table = tables[0]  # Get the first table
+        for table in tables:
+            # Get all <th> text content
             headers = [
-                th.get_text(strip=True).replace(u'\xa0', ' ')  
-                for th in first_table.find_all("th")
+                th.get_text(strip=True).replace(u'\xa0', ' ') 
+                for th in table.find_all("th")
             ]
-            
-            extracted_headers.append(headers if headers else ["unknown"])
-
+            if headers:
+                extracted_headers.append(headers)
+        
         return extracted_headers
 def get_openai_api_key():
     load_dotenv()
@@ -164,8 +156,8 @@ def process_html_and_extract_data():
     
     parsed_data = table_parser.process_tables_batch(html_tables_heads)
 
-    print(parsed_data)
+    
     return parsed_data
 
 
-process_html_and_extract_data()
+
