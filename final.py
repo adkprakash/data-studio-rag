@@ -1,4 +1,4 @@
-from parsing_on_batch import process_html_and_extract_data
+from parsing_on_batch_openai import process_html_and_extract_data
 from clean_html import call_build_block
 from extract_table import create_dataframes
 from bs4 import BeautifulSoup
@@ -72,8 +72,11 @@ class FinalDataframe:
         current_size = None
 
         for idx, row in df.iterrows():
-            value_before = row[first_col]
-            value = value_before.replace('"', '').replace('\\', '').replace("\xa0", " ") 
+            value_before = row[first_col]     
+            if value_before is not None: 
+                value = value_before.replace('"', '').replace('\\', '').replace("\xa0", " ")
+            else:
+                value = ""
             if value in thread_sizes:
                 current_size = value_before
             df.at[idx, 'thread_size'] = current_size
@@ -85,7 +88,8 @@ class FinalDataframe:
 
     @staticmethod
     def assign_material_surface(data_dict, dataframe):
-        materials = set(data_dict.get('material_surface', []))  
+        materials = {size.replace('"', '').replace('\\', '').replace("\xa0", " ") for size in data_dict.get('material_surface', [])}  
+        print(materials)
         if not materials:
             return dataframe
 

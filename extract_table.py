@@ -18,9 +18,15 @@ def create_dataframes():
         if thead:
             for row in thead.find_all("tr"):
                 cols = row.find_all(["th", "td"])
+                
+                for col in cols:
+                    if col.name == "td":
+                        col.name = "th"
                 thead_data.append([col.get_text(strip=True) for col in cols])
 
+
         tbody = table.find("tbody")
+
         if tbody:
             orphan_ths = tbody.find_all("th", recursive=False)  
             if orphan_ths:
@@ -41,9 +47,20 @@ def create_dataframes():
         
         thead_df = pd.DataFrame([row + [""] * (max_thead_cols - len(row)) for row in thead_data])
         tbody_df = pd.DataFrame([row + [""] * (max_tbody_cols - len(row)) for row in tbody_data])
+        try:
+            tbody_df = tbody_df[tbody_df.iloc[:, 0] != ""].reset_index(drop=True)
+        except IndexError:
+            print("tbody_df has no columns. Skipping...")
+            return None, None
+        
         
         thead_dataframes.append(thead_df)
         tbody_dataframes.append(tbody_df)
+        print(tbody_dataframes)
+
+        
 
     return thead_dataframes, tbody_dataframes
+
+create_dataframes()
 
