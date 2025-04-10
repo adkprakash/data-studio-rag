@@ -156,8 +156,12 @@ def process_html_and_extract_data():
     
     parsed_data = table_parser.process_tables_batch(html_tables_heads)
 
+   
+
     
     return parsed_data
+
+
 
 
 

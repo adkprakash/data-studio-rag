@@ -60,47 +60,124 @@ class FinalDataframe:
             print(f"Error adding header: {e}")
             return None
 
+    
     @staticmethod
     def assign_thread_size(data_dict, dataframe):
-        thread_sizes = {size.replace('"', '').replace('\\', '') for size in data_dict.get('thread_size', [])}  
+        thread_sizes = set()
+
+        def clean_value(value):
+            
+            return ''.join(
+                str(value)
+                    .replace('"', '')
+                    .replace('\\', '')
+                    .replace("\xa0", " ")
+                    .replace(' ', '')  
+            )
+
+        
+        for item in data_dict.get('thread_size', []):
+            
+            try:
+                cleaned_item = clean_value(item)
+                thread_sizes.add(cleaned_item)  
+                
+            except Exception as e:
+                print(f"Error processing item: {item} - {e}")
+
+        
         if not thread_sizes:
             return dataframe
 
         df = dataframe.copy()
+        df.columns = [f"{col}_{i}" if col in df.columns[:i] else col for i, col in enumerate(df.columns)]
+
         first_col = df.columns[0]
-        df['thread_size'] = None
+        df['thread_size'] = None  
         current_size = None
 
+        
         for idx, row in df.iterrows():
             value_before = row[first_col]
-            value = value_before.replace('"', '').replace('\\', '').replace("\xa0", " ") 
-            if value in thread_sizes:
-                current_size = value_before
+            cleaned_value = clean_value(value_before)
+
+            
+
+            if cleaned_value in thread_sizes:
+                current_size = value_before  
+
             df.at[idx, 'thread_size'] = current_size
 
-        df = df[~df[first_col].apply(lambda x: x.replace('"', '').replace('\\', '').replace("\xa0", " ") in thread_sizes)].reset_index(drop=True)
+        
+        mask = df[first_col].map(lambda x: clean_value(x) in thread_sizes)
 
+        
+        df = df[~mask].reset_index(drop=True)
+
+        
         return df
 
 
+    
     @staticmethod
     def assign_material_surface(data_dict, dataframe):
-        materials = set(data_dict.get('material_surface', []))  
+        
+        materials = set()
+
+        def clean_value(value):
+            
+            return ''.join(
+                str(value)
+                    .replace('"', '')
+                    .replace('\\', '')
+                    .replace("\xa0", " ")
+                    .replace(' ', '')  
+            )
+        
+        
+        for item in data_dict.get('material_surface', []):
+            
+            try:
+
+                
+                cleaned_item = clean_value(item)
+                materials.add(cleaned_item)
+
+            except Exception as e:
+                print(f"Error processing item: {item} - {e}") 
+        
+        
         if not materials:
             return dataframe
-
+        
+        
         df = dataframe.copy()
+
+        
+        df.columns = [f"{col}_{i}" if col in df.columns[:i] else col for i, col in enumerate(df.columns)]
+
         first_col = df.columns[0]
         df['material_surface'] = None
-        current_material = None
+        current_material = None  
 
         for idx, row in df.iterrows():
-            value = row[first_col]
-            if value in materials:
-                current_material = value
-            df.at[idx, 'material_surface'] = current_material
+            value_before = row[first_col]
+            cleaned_value = clean_value(value_before)
 
-        df = df[~df[first_col].isin(materials)].reset_index(drop=True)
+            
+
+            if cleaned_value in materials:
+                current_size = value_before  
+
+            df.at[idx, 'material_surface'] = current_size
+
+        
+        mask = df[first_col].map(lambda x: clean_value(x) in materials)
+
+        
+        df = df[~mask].reset_index(drop=True)
+
+        
         return df
 
     @staticmethod
